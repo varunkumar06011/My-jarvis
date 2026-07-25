@@ -1,5 +1,9 @@
 MODEL_NAME = "qwen2.5-coder:7b"
 
+# Set to 0 to force CPU-only inference, or a number to limit GPU layers
+# None = let Ollama decide (use all GPU layers)
+GPU_LAYERS = None
+
 APP_NAME = "Jarvis"
 
 VERSION = "2.0"

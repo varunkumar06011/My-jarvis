@@ -1,5 +1,6 @@
 from brain.llm import LLM
 from core.router import route
+from core.event_bus import bus
 from logs.logger import write_log
 from voice.stt import SpeechToText
 from voice.tts import TextToSpeech
@@ -14,13 +15,26 @@ def start_assistant(jarvis: LLM, speaker: TextToSpeech):
     print("Press Ctrl+C to quit")
     print("=" * 50)
 
-    wake_detector = WakeWordDetector()
-    stt = SpeechToText()
+    from core.service_registry import registry
+
+    if registry.has("wake_word"):
+        wake_detector = registry.get("wake_word")
+    else:
+        wake_detector = WakeWordDetector()
+        registry.register("wake_word", wake_detector)
+
+    if registry.has("stt"):
+        stt = registry.get("stt")
+    else:
+        stt = SpeechToText()
+        registry.register("stt", stt)
 
     while True:
         wake_detector.listen()
+        bus.publish("WakeWordDetected", None)
 
         speaker.speak("Yes?")
+        bus.publish("SpeechStarted", {"text": "Yes?"})
 
         while True:
             print("\n🎤 Listening...")
@@ -30,10 +44,12 @@ def start_assistant(jarvis: LLM, speaker: TextToSpeech):
                 continue
 
             print(f"\nYou: {text}")
+            bus.publish("SpeechFinished", {"text": text})
 
             if text.lower().strip() in ("goodbye", "exit", "quit", "bye"):
                 print("\nEnding conversation...")
                 speaker.speak("Goodbye!")
+                bus.publish("SpeechStarted", {"text": "Goodbye!"})
                 break
 
             write_log("VOICE USER", text)
@@ -43,11 +59,16 @@ def start_assistant(jarvis: LLM, speaker: TextToSpeech):
             if tool_reply is not None:
                 print(f"\nJarvis: {tool_reply}")
                 write_log("JARVIS", tool_reply)
+                bus.publish("ToolExecuted", {"input": text, "result": tool_reply})
                 speaker.speak(tool_reply)
+                bus.publish("SpeechStarted", {"text": tool_reply})
                 continue
 
             reply = jarvis.chat(text)
 
             print(f"\nJarvis: {reply}")
 
+            write_log("JARVIS", reply)
+            bus.publish("LLMResponse", {"input": text, "response": reply})
             speaker.speak(reply)
+            bus.publish("SpeechStarted", {"text": reply})

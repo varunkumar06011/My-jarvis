@@ -1,6 +1,6 @@
 import ollama
 
-from configs.config import MODEL_NAME
+from configs.config import MODEL_NAME, GPU_LAYERS
 from logs.logger import write_log
 from memory.storage import save_history, load_history
 
@@ -10,6 +10,10 @@ class LLM:
         self.model = model
         self.session_name = session_name
         self.history = load_history(session_name)
+
+        self.options = {}
+        if GPU_LAYERS is not None:
+            self.options["num_gpu"] = GPU_LAYERS
 
     def chat(self, message: str) -> str:
         self.history.append({
@@ -22,7 +26,8 @@ class LLM:
         try:
             response = ollama.chat(
                 model=self.model,
-                messages=self.history
+                messages=self.history,
+                options=self.options
             )
 
             reply = response["message"]["content"]
