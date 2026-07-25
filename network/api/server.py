@@ -53,6 +53,8 @@ from network.routes.automation import router as automation_router
 from network.routes.plugins_api import router as automation_plugins_router
 from network.routes.cto import router as cto_router
 from network.routes.learning import router as learning_router
+from network.routes.sync import router as sync_router
+from network.routes.marketplace import router as marketplace_router
 
 
 @asynccontextmanager
@@ -159,6 +161,7 @@ def create_app() -> FastAPI:
     app.include_router(automation_plugins_router)
     app.include_router(cto_router)
     app.include_router(learning_router)
+    app.include_router(sync_router)
 
     # ── Backward-compat redirects (/api/* -> /api/v1/*) ──
     from fastapi.responses import RedirectResponse
@@ -183,6 +186,16 @@ def create_app() -> FastAPI:
     @app.get("/", response_model=SuccessResponse)
     async def root():
         return SuccessResponse(status="ok", message=f"{APP_NAME} API v{VERSION}")
+
+    # ── Web Client ──
+    @app.get("/web", include_in_schema=False)
+    async def web_client():
+        from fastapi.responses import HTMLResponse
+        from pathlib import Path
+        web_file = Path(__file__).parent.parent.parent / "desktop" / "web_client.html"
+        if web_file.exists():
+            return HTMLResponse(web_file.read_text(encoding="utf-8"))
+        return HTMLResponse("<h1>Web client not found</h1>", status_code=404)
 
     # ── Auth: Login (JWT) ──
     @app.post("/api/v1/auth/login", response_model=TokenResponse, tags=["auth"])

@@ -43,6 +43,15 @@ class AutomationContext:
     def resolve(self, value: Any) -> Any:
         """Resolve template variables in a value (e.g. {{var_name}})."""
         if isinstance(value, str):
+            import re
+            # If the entire string is a single template var, return the raw value
+            full_match = re.fullmatch(r"\{\{(\w+)\}\}", value.strip())
+            if full_match:
+                key = full_match.group(1)
+                with self._lock:
+                    if key in self.variables:
+                        return self.variables[key]
+            # Otherwise, do string substitution
             result = value
             for k, v in self.get_all_vars().items():
                 result = result.replace(f"{{{{{k}}}}}", str(v))

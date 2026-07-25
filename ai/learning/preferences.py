@@ -5,6 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+PREFERENCES_FILE = Path("data/preferences.json")
+
 
 class UserPreferences:
     def __init__(self):

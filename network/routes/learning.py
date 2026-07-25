@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
+from typing import Any
 
 from ai.learning.patterns import pattern_library
 from ai.learning.decisions import decision_history
@@ -29,7 +30,7 @@ class DecisionCreate(BaseModel):
 
 class PreferenceSet(BaseModel):
     key: str
-    value: any
+    value: Any
 
 
 @router.get("/patterns")

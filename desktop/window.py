@@ -18,6 +18,7 @@ from desktop.pages.performance import PerformancePage
 from desktop.pages.automation import AutomationPage
 from desktop.pages.cto import CTOPage
 from desktop.pages.learning import LearningPage
+from desktop.pages.marketplace import MarketplacePage
 
 from core.event_bus import bus
 from core.service_registry import registry
@@ -49,6 +50,7 @@ class MainWindow(QMainWindow):
             ("🧠  Learning", LearningPage()),
             ("⚙  Settings", SettingsPage()),
             ("🧩  Plugins", PluginsPage()),
+            ("🏪  Marketplace", MarketplacePage()),
             ("📊  Diagnostics", DiagnosticsPage()),
             ("📜  Logs", LogsPage()),
             ("🤖  Models", ModelsPage()),

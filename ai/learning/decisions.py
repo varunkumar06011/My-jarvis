@@ -4,6 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+DECISIONS_FILE = Path("data/decisions.json")
+
 
 class DecisionRecord:
     def __init__(self, title: str, context: str, decision: str,
