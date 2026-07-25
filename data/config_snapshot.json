@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "settings": {
+    "model_name": "qwen2.5-coder:7b",
+    "gpu_layers": 0,
+    "llm_max_retries": 3,
+    "llm_retry_delay": 5,
+    "app_name": "Jarvis",
+    "version": "2.0",
+    "whisper_model": "small",
+    "sample_rate": 16000,
+    "silence_timeout": 1.0,
+    "max_record_seconds": 20,
+    "wake_word": "hey_jarvis",
+    "wake_threshold": 0.3,
+    "wake_timeout": 30,
+    "api_host": "0.0.0.0",
+    "api_port": 8100,
+    "api_rate_limit_per_minute": 30,
+    "api_rate_limit_per_hour": 100,
+    "api_jwt_expire_seconds": 3600,
+    "api_enable_docs": true
+  }
+}
