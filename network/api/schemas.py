@@ -162,3 +162,15 @@ class ErrorResponse(BaseModel):
 class SuccessResponse(BaseModel):
     status: str
     message: Optional[str] = None
+
+
+# ── Repository Query ─────────────────────────────────────────────────────────
+
+class RepoQueryRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=4000)
+
+
+class RepoQueryResponse(BaseModel):
+    intent: Optional[str] = None
+    response: str
+    is_repo_query: bool

@@ -2,12 +2,118 @@ import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from ai.cto.dashboard import executive_dashboard, REPORTS_DIR
 from core.event_store import event_store
 from core.metrics import metrics
 from core.telemetry import telemetry
+
+
+MILESTONES_FILE = REPORTS_DIR / "milestones.json"
+
+
+class MilestoneTracker:
+    def __init__(self):
+        self._milestones: list[dict] = []
+        self._load()
+
+    def _load(self):
+        if MILESTONES_FILE.exists():
+            try:
+                self._milestones = json.loads(MILESTONES_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                self._milestones = []
+
+    def _save(self):
+        MILESTONES_FILE.write_text(json.dumps(self._milestones, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def add(self, title: str, description: str = "", category: str = "general",
+            target_date: str = "", status: str = "planned") -> dict:
+        milestone = {
+            "id": f"ms-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            "title": title,
+            "description": description,
+            "category": category,
+            "target_date": target_date,
+            "status": status,
+            "created_at": datetime.now().isoformat(),
+            "completed_at": None,
+        }
+        self._milestones.append(milestone)
+        self._save()
+        return milestone
+
+    def complete(self, milestone_id: str) -> dict:
+        for ms in self._milestones:
+            if ms["id"] == milestone_id:
+                ms["status"] = "completed"
+                ms["completed_at"] = datetime.now().isoformat()
+                self._save()
+                return ms
+        return {"error": "Milestone not found"}
+
+    def list(self, status: str = "", category: str = "", limit: int = 50) -> List[dict]:
+        results = []
+        for ms in self._milestones:
+            if status and ms.get("status") != status:
+                continue
+            if category and ms.get("category") != category:
+                continue
+            results.append(ms)
+        return results[-limit:]
+
+    def get_monthly_milestones(self, year: int = None, month: int = None) -> List[dict]:
+        now = datetime.now()
+        year = year or now.year
+        month = month or now.month
+        results = []
+        for ms in self._milestones:
+            created = ms.get("created_at", "")[:10]
+            completed = ms.get("completed_at", "")[:10] if ms.get("completed_at") else ""
+            target = ms.get("target_date", "")[:10] if ms.get("target_date") else ""
+
+            for date_str in [created, completed, target]:
+                if date_str and str(year) in date_str:
+                    month_part = int(date_str.split("-")[1]) if "-" in date_str else 0
+                    if month_part == month:
+                        results.append(ms)
+                        break
+        return results
+
+    def auto_generate_from_events(self) -> List[dict]:
+        events = event_store.search(limit=100)
+        auto = []
+
+        completed_tasks = [e for e in events if e.get("event_type") == "TaskCompleted"]
+        if len(completed_tasks) >= 5:
+            auto.append({
+                "title": f"{len(completed_tasks)} tasks completed",
+                "category": "automation",
+                "status": "completed",
+            })
+
+        automation_events = [e for e in events if "Automation" in e.get("event_type", "")]
+        if automation_events:
+            auto.append({
+                "title": f"{len(automation_events)} automation events",
+                "category": "automation",
+                "status": "completed",
+            })
+
+        health_events = [e for e in events if e.get("event_type") in ("HealthCheckPassed", "HealthCheckFailed")]
+        if health_events:
+            passed = sum(1 for e in health_events if e.get("event_type") == "HealthCheckPassed")
+            auto.append({
+                "title": f"Health checks: {passed}/{len(health_events)} passed",
+                "category": "health",
+                "status": "completed",
+            })
+
+        return auto
+
+
+milestone_tracker = MilestoneTracker()
 
 
 class ReportGenerator:
@@ -52,6 +158,10 @@ class ReportGenerator:
         snap = executive_dashboard.snapshot()
         stats = event_store.statistics()
 
+        auto_milestones = milestone_tracker.auto_generate_from_events()
+        recorded_milestones = milestone_tracker.get_monthly_milestones()
+        all_milestones = auto_milestones + [m for m in recorded_milestones if m not in auto_milestones]
+
         report = {
             "id": f"monthly-{datetime.now().strftime('%Y%m%d')}",
             "type": "monthly",
@@ -61,7 +171,7 @@ class ReportGenerator:
                 "summary": snap,
                 "event_statistics": stats,
                 "recommendations": self._generate_recommendations(snap),
-                "milestones": [],
+                "milestones": all_milestones,
             },
         }
         self._save(report)

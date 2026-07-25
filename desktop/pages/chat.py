@@ -45,6 +45,10 @@ class ChatPage(QWidget):
         header.addWidget(title)
         header.addStretch()
 
+        self.status_label = QLabel("State: —")
+        self.status_label.setObjectName("statLabel")
+        header.addWidget(self.status_label)
+
         self.clear_btn = QPushButton("Clear")
         self.clear_btn.clicked.connect(self.clear_chat)
         header.addWidget(self.clear_btn)
@@ -130,4 +134,10 @@ class ChatPage(QWidget):
         self._init_html()
 
     def refresh(self):
-        pass
+        try:
+            from core.service_registry import registry
+            if registry.has("lifecycle"):
+                lc = registry.get("lifecycle")
+                self.status_label.setText(f"State: {lc.state.value}")
+        except Exception:
+            pass

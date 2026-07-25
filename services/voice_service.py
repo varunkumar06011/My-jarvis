@@ -3,6 +3,7 @@ from core.router import route
 from logs.logger import write_log
 from voice.stt import SpeechToText
 from voice.tts import TextToSpeech
+from services.repo_bridge import handle_repo_query
 
 
 def start_voice_chat(jarvis: LLM, speaker: TextToSpeech):
@@ -26,6 +27,13 @@ def start_voice_chat(jarvis: LLM, speaker: TextToSpeech):
             break
 
         write_log("VOICE USER", text)
+
+        repo_reply = handle_repo_query(text)
+        if repo_reply is not None:
+            print(f"\nJarvis: {repo_reply}")
+            write_log("JARVIS", repo_reply)
+            speaker.speak(repo_reply)
+            continue
 
         tool_reply = route(text)
 

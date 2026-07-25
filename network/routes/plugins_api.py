@@ -1,6 +1,4 @@
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import APIRouter, Depends
 
 from network.api.authentication import authenticate
 

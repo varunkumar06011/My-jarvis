@@ -33,6 +33,7 @@ class GitPlugin(AutomationPlugin):
         self.register_action("git.create_branch", self.create_branch, RiskLevel.SAFE)
         self.register_action("git.fetch", self.fetch, RiskLevel.SAFE)
         self.register_action("git.remote", self.remote, RiskLevel.SAFE)
+        self.register_action("git.add_remote", self.add_remote, RiskLevel.MEDIUM)
         self.register_action("git.init", self.init_repo, RiskLevel.SAFE)
 
         self.register_workflow({
@@ -193,4 +194,16 @@ class GitPlugin(AutomationPlugin):
     def init_repo(self, params: dict, ctx: AutomationContext, rollback: RollbackManager) -> dict:
         repo = params.get("repo_path", ".")
         r = self._run_git(["init"], repo)
+        return {"status": "ok" if r["exit_code"] == 0 else "error", "output": r["stdout"] or r["stderr"]}
+
+    def add_remote(self, params: dict, ctx: AutomationContext, rollback: RollbackManager) -> dict:
+        """Add a remote to a git repository."""
+        repo = params.get("repo_path", ".")
+        remote_name = params.get("remote_name", "origin")
+        url = params.get("url", "")
+        if not url:
+            return {"status": "error", "error": "Remote URL is required"}
+        r = self._run_git(["remote", "add", remote_name, url], repo)
+        if r["exit_code"] == 0:
+            rollback.register("git.add_remote", lambda: self._run_git(["remote", "remove", remote_name], repo), f"Remove remote {remote_name}")
         return {"status": "ok" if r["exit_code"] == 0 else "error", "output": r["stdout"] or r["stderr"]}

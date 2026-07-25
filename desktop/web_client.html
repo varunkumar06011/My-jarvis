@@ -44,6 +44,77 @@
     <script>
         const API = '';
         const KEY = 'jarvis-local-dev-key';
+        let deviceId = localStorage.getItem('jarvis_device_id') || '';
+        let syncVersion = parseInt(localStorage.getItem('jarvis_sync_version') || '0');
+
+        async function registerDevice() {
+            if (deviceId) {
+                sendHeartbeat();
+                return;
+            }
+            try {
+                const res = await fetch(`${API}/api/v1/sync/devices/register`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: 'Web Client',
+                        device_type: 'web',
+                        platform: navigator.userAgent.substring(0, 50),
+                        capabilities: ['chat', 'sync']
+                    })
+                });
+                const data = await res.json();
+                if (data.id) {
+                    deviceId = data.id;
+                    localStorage.setItem('jarvis_device_id', deviceId);
+                    addMsg('jarvis', 'Device registered (ID: ' + deviceId + ')');
+                    sendHeartbeat();
+                }
+            } catch (e) {}
+        }
+
+        async function sendHeartbeat() {
+            if (!deviceId) return;
+            try {
+                await fetch(`${API}/api/v1/sync/devices/${deviceId}/heartbeat`, {method: 'POST'});
+            } catch (e) {}
+        }
+
+        async function pushChat(message, response) {
+            if (!deviceId) return;
+            try {
+                await fetch(`${API}/api/v1/sync/devices/${deviceId}/push`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        data_type: 'chat',
+                        payload: {message: message, response: response, timestamp: new Date().toISOString()}
+                    })
+                });
+            } catch (e) {}
+        }
+
+        async function pullSync() {
+            if (!deviceId) return;
+            try {
+                const res = await fetch(`${API}/api/v1/sync/devices/${deviceId}/pull?since_version=${syncVersion}&data_type=chat`);
+                const data = await res.json();
+                if (data.updates && data.updates.length > 0) {
+                    for (const update of data.updates) {
+                        if (update.version > syncVersion) {
+                            syncVersion = update.version;
+                            localStorage.setItem('jarvis_sync_version', String(syncVersion));
+                        }
+                        if (update.payload && update.payload.message && update.device_id !== deviceId) {
+                            addMsg('user', '[sync] ' + update.payload.message);
+                            if (update.payload.response) {
+                                addMsg('jarvis', '[sync] ' + update.payload.response);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
 
         async function send() {
             const input = document.getElementById('msg-input');
@@ -55,7 +126,9 @@
             try {
                 const res = await fetch(`${API}/api/v1/chat?message=${encodeURIComponent(msg)}&api_key=${KEY}`);
                 const data = await res.json();
-                addMsg('jarvis', data.response || data.error || 'No response');
+                const reply = data.response || data.error || 'No response';
+                addMsg('jarvis', reply);
+                pushChat(msg, reply);
             } catch (e) {
                 addMsg('jarvis', 'Error: ' + e.message);
             }
@@ -83,7 +156,10 @@
             } catch (e) {}
         }
 
+        registerDevice();
         setInterval(updateStatus, 5000);
+        setInterval(sendHeartbeat, 30000);
+        setInterval(pullSync, 10000);
         updateStatus();
     </script>
 </body>

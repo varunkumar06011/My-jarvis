@@ -10,8 +10,12 @@ from typing import Optional
 SYNC_DIR = Path("data/sync")
 SYNC_DIR.mkdir(parents=True, exist_ok=True)
 
+DATA_STORE_DIR = SYNC_DIR / "data"
+DATA_STORE_DIR.mkdir(parents=True, exist_ok=True)
+
 DEVICES_FILE = SYNC_DIR / "devices.json"
 SYNC_LOG_FILE = SYNC_DIR / "sync_log.json"
+SYNC_DATA_FILE = SYNC_DIR / "sync_data.json"
 
 
 class DeviceInfo:
@@ -72,6 +76,7 @@ class SyncManager:
     def __init__(self):
         self._devices: dict[str, DeviceInfo] = {}
         self._sync_log: list[dict] = []
+        self._sync_data: dict[str, list[dict]] = {}  # data_type -> list of payload entries
         self._lock = threading.Lock()
         self._load()
 
@@ -91,6 +96,12 @@ class SyncManager:
             except Exception:
                 pass
 
+        if SYNC_DATA_FILE.exists():
+            try:
+                self._sync_data = json.loads(SYNC_DATA_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                self._sync_data = {}
+
     def _save_devices(self):
         with self._lock:
             data = [d.to_dict() for d in self._devices.values()]
@@ -99,6 +110,10 @@ class SyncManager:
     def _save_log(self):
         with self._lock:
             SYNC_LOG_FILE.write_text(json.dumps(self._sync_log[-200:], indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def _save_data(self):
+        with self._lock:
+            SYNC_DATA_FILE.write_text(json.dumps(self._sync_data, indent=2, ensure_ascii=False), encoding="utf-8")
 
     def register_device(self, name: str, device_type: str, platform: str,
                         capabilities: list[str] = None) -> DeviceInfo:
@@ -130,16 +145,33 @@ class SyncManager:
                 version = 0
 
         sp = SyncPayload(device_id, data_type, payload, version)
-        self._log_sync("push", device_id, f"Pushed {data_type} v{version}")
+
+        entry = sp.to_dict()
+        with self._lock:
+            if data_type not in self._sync_data:
+                self._sync_data[data_type] = []
+            self._sync_data[data_type].append(entry)
+            if len(self._sync_data[data_type]) > 500:
+                self._sync_data[data_type] = self._sync_data[data_type][-500:]
+        self._save_data()
+        self._log_sync("push", device_id, f"Pushed {data_type} v{version}", version=version, data_type=data_type, payload_id=sp.id)
         return sp
 
-    def pull(self, device_id: str, since_version: int = 0) -> list[dict]:
+    def pull(self, device_id: str, since_version: int = 0, data_type: str = "") -> list[dict]:
         results = []
         with self._lock:
-            for entry in self._sync_log:
-                if entry.get("device_id") == device_id and entry.get("version", 0) > since_version:
-                    results.append(entry)
+            types_to_check = [data_type] if data_type else list(self._sync_data.keys())
+            for dt in types_to_check:
+                for entry in self._sync_data.get(dt, []):
+                    if entry.get("version", 0) > since_version:
+                        results.append(entry)
+        results.sort(key=lambda x: x.get("version", 0))
         return results
+
+    def get_data(self, data_type: str, limit: int = 50) -> list[dict]:
+        with self._lock:
+            entries = list(self._sync_data.get(data_type, []))
+        return entries[-limit:]
 
     def list_devices(self) -> list[dict]:
         with self._lock:
@@ -154,12 +186,15 @@ class SyncManager:
                 return True
         return False
 
-    def _log_sync(self, action: str, device_id: str, message: str):
+    def _log_sync(self, action: str, device_id: str, message: str, version: int = 0, data_type: str = "", payload_id: str = ""):
         entry = {
             "timestamp": datetime.now().isoformat(),
             "action": action,
             "device_id": device_id,
             "message": message,
+            "version": version,
+            "data_type": data_type,
+            "payload_id": payload_id,
         }
         with self._lock:
             self._sync_log.append(entry)
@@ -178,6 +213,8 @@ class SyncManager:
                 "by_type": {t: sum(1 for d in self._devices.values() if d.device_type == t)
                            for t in set(d.device_type for d in self._devices.values())},
                 "total_syncs": len(self._sync_log),
+                "data_types": {dt: len(entries) for dt, entries in self._sync_data.items()},
+                "total_data_entries": sum(len(v) for v in self._sync_data.values()),
             }
 
 

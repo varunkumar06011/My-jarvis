@@ -140,7 +140,7 @@ class RepositoryDiscovery:
                 pass
         return projects
 
-    def _turbo_packages(self) -> list]:
+    def _turbo_packages(self) -> list:
         packages = []
         pkg = self.root / "package.json"
         if pkg.exists():

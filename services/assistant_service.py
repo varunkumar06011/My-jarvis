@@ -5,6 +5,7 @@ from logs.logger import write_log
 from voice.stt import SpeechToText
 from voice.tts import TextToSpeech
 from voice.wake_word import WakeWordDetector
+from services.repo_bridge import handle_repo_query
 
 
 def start_assistant(jarvis: LLM, speaker: TextToSpeech):
@@ -54,6 +55,17 @@ def start_assistant(jarvis: LLM, speaker: TextToSpeech):
 
             write_log("VOICE USER", text)
 
+            # ── Repository Intelligence Bridge ──
+            repo_reply = handle_repo_query(text)
+            if repo_reply is not None:
+                print(f"\nJarvis: {repo_reply}")
+                write_log("JARVIS", repo_reply)
+                bus.publish("RepoQueryAnswered", {"input": text, "response": repo_reply})
+                speaker.speak(repo_reply)
+                bus.publish("SpeechStarted", {"text": repo_reply})
+                continue
+
+            # ── Tool Router (calculator, date, system, etc.) ──
             tool_reply = route(text)
 
             if tool_reply is not None:
@@ -64,6 +76,7 @@ def start_assistant(jarvis: LLM, speaker: TextToSpeech):
                 bus.publish("SpeechStarted", {"text": tool_reply})
                 continue
 
+            # ── LLM Fallback ──
             reply = jarvis.chat(text)
 
             print(f"\nJarvis: {reply}")

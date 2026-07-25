@@ -74,3 +74,14 @@ async def update_plugin(name: str):
 @router.get("/stats")
 async def stats():
     return marketplace.stats()
+
+
+@router.post("/run/{name}")
+async def run_plugin(name: str, entry_function: str = "run", args: str = ""):
+    return marketplace.run_plugin(name, entry_function, args)
+
+
+@router.get("/validate/{name}")
+async def validate_plugin(name: str):
+    from marketplace.registry import sandbox
+    return sandbox.validate_plugin(name)

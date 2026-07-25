@@ -1,6 +1,7 @@
 import sys
 import os
 import threading
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -93,6 +94,58 @@ def bootstrap():
     qt_app, window = start_gui()
     registry.register("gui_window", window)
     print("✓ GUI launched")
+
+    # AI Engineering Ecosystem (Steps 30-34)
+    from flags import flag_manager
+    if flag_manager.is_enabled("repo_intelligence"):
+        from ai.repo.intelligence import repo_intelligence
+        registry.register("repo_intelligence", repo_intelligence)
+        print("✓ Repository Intelligence Platform loaded")
+    if flag_manager.is_enabled("knowledge_engine"):
+        from ai.knowledge.engine import knowledge_engine
+        knowledge_engine.indexer.load()
+        registry.register("knowledge_engine", knowledge_engine)
+        print("✓ Enterprise Knowledge Engine (RAG) loaded")
+    if flag_manager.is_enabled("ai_engineer"):
+        from ai.engineer.engineer import ai_engineer
+        registry.register("ai_engineer", ai_engineer)
+        print("✓ AI Software Engineer loaded")
+    if flag_manager.is_enabled("engineering_agents"):
+        from ai.agents.coordinator import agent_coordinator
+        registry.register("agent_coordinator", agent_coordinator)
+        print(f"✓ Engineering Agents loaded ({len(agent_coordinator.agents)} agents)")
+    if flag_manager.is_enabled("dev_ecosystem"):
+        from ai.ecosystem.ecosystem import dev_ecosystem
+        registry.register("dev_ecosystem", dev_ecosystem)
+        print("✓ Development Ecosystem loaded")
+
+    from services.project_manager import project_manager
+    registry.register("project_manager", project_manager)
+    print("✓ Project Context Manager loaded")
+
+    from services.workspace_manager import workspace_manager
+    workspace_manager.sync_with_project_manager()
+    registry.register("workspace_manager", workspace_manager)
+    print("✓ Workspace Manager loaded")
+
+    from services.verification import verification_workflow
+    registry.register("verification_workflow", verification_workflow)
+    print("✓ End-to-End Verification Workflow loaded")
+
+    from ai.engineer.build_test_fix import build_test_fix_loop
+    registry.register("build_test_fix_loop", build_test_fix_loop)
+    print("✓ Build-Test-Fix-Retry Loop loaded")
+
+    from ai.repo.continuous import continuous_repo_intelligence
+    registry.register("continuous_repo_intel", continuous_repo_intelligence)
+    if flag_manager.is_enabled("repo_intelligence"):
+        continuous_repo_intelligence.start(str(Path(".").resolve()))
+        print("✓ Continuous Repository Intelligence started")
+
+    from ai.cto.continuous import continuous_cto
+    registry.register("continuous_cto", continuous_cto)
+    continuous_cto.start()
+    print("✓ Continuous AI CTO monitoring started")
 
     print("\nStarting Secure API Server...")
     from configs.config import API_HOST, API_PORT

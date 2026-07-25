@@ -1,0 +1,11 @@
+[
+  {
+    "manifest_id": "e4a86bd9a9f8",
+    "name": "test_plugin",
+    "version": "1.0",
+    "install_path": "plugins/test_plugin",
+    "installed_at": "2026-07-25T18:28:42.724870",
+    "enabled": true,
+    "update_available": false
+  }
+]

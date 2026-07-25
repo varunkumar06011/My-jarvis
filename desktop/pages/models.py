@@ -1,11 +1,15 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QGroupBox, QFormLayout
 
 from configs.config import MODEL_NAME, WHISPER_MODEL, WAKE_WORD, SAMPLE_RATE
+from core.service_registry import registry
 
 
 class ModelsPage(QWidget):
     def __init__(self):
         super().__init__()
+        self._build()
+
+    def _build(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
@@ -14,11 +18,15 @@ class ModelsPage(QWidget):
         title.setObjectName("titleLabel")
         layout.addWidget(title)
 
-        llm_group = QGroupBox("LLM (Ollama)")
-        llm_form = QFormLayout(llm_group)
-        llm_form.addRow("Model:", QLabel(MODEL_NAME))
-        llm_form.addRow("Engine:", QLabel("Ollama (CPU-only)"))
-        layout.addWidget(llm_group)
+        self.llm_group = QGroupBox("LLM (Ollama)")
+        self.llm_form = QFormLayout(self.llm_group)
+        self.llm_model_label = QLabel(MODEL_NAME)
+        self.llm_engine_label = QLabel("Ollama (CPU-only)")
+        self.llm_status_label = QLabel("—")
+        self.llm_form.addRow("Model:", self.llm_model_label)
+        self.llm_form.addRow("Engine:", self.llm_engine_label)
+        self.llm_form.addRow("Status:", self.llm_status_label)
+        layout.addWidget(self.llm_group)
 
         stt_group = QGroupBox("Speech-to-Text (Whisper)")
         stt_form = QFormLayout(stt_group)
@@ -47,4 +55,16 @@ class ModelsPage(QWidget):
         layout.addStretch()
 
     def refresh(self):
-        pass
+        try:
+            if registry.has("llm"):
+                llm = registry.get("llm")
+                if hasattr(llm, "client") and llm.client:
+                    self.llm_status_label.setText("✅ Connected")
+                    self.llm_status_label.setObjectName("statusOk")
+                else:
+                    self.llm_status_label.setText("⚠ No connection")
+                    self.llm_status_label.setObjectName("statusBad")
+            else:
+                self.llm_status_label.setText("—")
+        except Exception:
+            self.llm_status_label.setText("⚠ Error")

@@ -24,3 +24,11 @@ data/api_keys.json
 
 # Backups
 backups/
+
+# Temp output files
+out*.txt
+test_output.txt
+
+# Runtime data (keep structure, ignore generated state)
+data/knowledge_memory/
+data/sync/

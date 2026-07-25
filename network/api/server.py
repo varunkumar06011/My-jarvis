@@ -54,8 +54,10 @@ from network.routes.plugins_api import router as automation_plugins_router
 from network.routes.cto import router as cto_router
 from network.routes.learning import router as learning_router
 from network.routes.sync import router as sync_router
+from network.routes.ecosystem import router as ecosystem_router
 from network.routes.marketplace import router as marketplace_router
 from network.routes.release import router as release_router
+from network.routes.projects import router as projects_router
 
 
 @asynccontextmanager
@@ -102,6 +104,33 @@ async def lifespan(app: FastAPI):
     registry.register("automation_engine", automation_engine)
     from automation.plugins.base import plugin_loader
     registry.register("plugin_loader", plugin_loader)
+
+    # AI Engineering Ecosystem (Steps 30-34)
+    if flag_manager.is_enabled("repo_intelligence"):
+        from ai.repo.intelligence import repo_intelligence
+        registry.register("repo_intelligence", repo_intelligence)
+        print("[API] ✅ Repository Intelligence Platform loaded")
+
+    if flag_manager.is_enabled("knowledge_engine"):
+        from ai.knowledge.engine import knowledge_engine
+        knowledge_indexer_loaded = knowledge_engine.indexer.load()
+        registry.register("knowledge_engine", knowledge_engine)
+        print("[API] ✅ Enterprise Knowledge Engine (RAG) loaded")
+
+    if flag_manager.is_enabled("ai_engineer"):
+        from ai.engineer.engineer import ai_engineer
+        registry.register("ai_engineer", ai_engineer)
+        print("[API] ✅ AI Software Engineer loaded")
+
+    if flag_manager.is_enabled("engineering_agents"):
+        from ai.agents.coordinator import agent_coordinator
+        registry.register("agent_coordinator", agent_coordinator)
+        print(f"[API] ✅ Engineering Agents loaded ({len(agent_coordinator.agents)} agents)")
+
+    if flag_manager.is_enabled("dev_ecosystem"):
+        from ai.ecosystem.ecosystem import dev_ecosystem
+        registry.register("dev_ecosystem", dev_ecosystem)
+        print("[API] ✅ Development Ecosystem loaded")
 
     # Bridge EventBus → WebSocket
     subscribe_to_event_bus()
@@ -165,12 +194,14 @@ def create_app() -> FastAPI:
     app.include_router(sync_router)
     app.include_router(marketplace_router)
     app.include_router(release_router)
+    app.include_router(ecosystem_router)
+    app.include_router(projects_router)
 
     # ── Backward-compat redirects (/api/* -> /api/v1/*) ──
     from fastapi.responses import RedirectResponse
 
     _v1_paths = [
-        "/chat", "/chat/stream", "/voice", "/tool",
+        "/chat", "/chat/stream", "/voice", "/tool", "/repo-query",
         "/status", "/health", "/plugins", "/plugins/reload",
         "/memory", "/memory/sessions", "/settings",
     ]

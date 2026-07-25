@@ -18,6 +18,11 @@ DEFAULT_FLAGS = {
     "recovery_engine": True,
     "performance_dashboard": True,
     "diagnostics_api": True,
+    "repo_intelligence": True,
+    "knowledge_engine": True,
+    "ai_engineer": True,
+    "engineering_agents": True,
+    "dev_ecosystem": True,
 }
 
 

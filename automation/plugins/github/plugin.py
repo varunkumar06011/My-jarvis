@@ -54,6 +54,8 @@ class GitHubPlugin(AutomationPlugin):
         self.register_action("github.create_release", self.create_release, RiskLevel.CRITICAL)
         self.register_action("github.user", self.get_user, RiskLevel.SAFE)
         self.register_action("github.search", self.search_repos, RiskLevel.SAFE)
+        self.register_action("github.create_repo", self.create_repo, RiskLevel.HIGH)
+        self.register_action("github.delete_repo", self.delete_repo, RiskLevel.CRITICAL)
 
         self.register_workflow({
             "id": "github_review_workflow",
@@ -65,6 +67,24 @@ class GitHubPlugin(AutomationPlugin):
                 {"name": "list_prs", "type": "action", "action": "github.pulls", "params": {"repo": "{{repo}}"}},
                 {"name": "review_gate", "type": "approval", "approval_summary": "Review and approve PR merge"},
                 {"name": "merge", "type": "action", "action": "github.merge_pr", "params": {"repo": "{{repo}}", "pr_number": 1}},
+            ],
+        })
+
+        self.register_workflow({
+            "id": "github_project_lifecycle",
+            "name": "GitHub Project Lifecycle",
+            "description": "Create project, init git, create GitHub repo, add remote, commit, push",
+            "version": "1.0",
+            "variables": {"project_name": "my-app", "project_type": "python", "private": False},
+            "steps": [
+                {"name": "create_project", "type": "action", "action": "dev.create_project", "params": {"name": "{{project_name}}", "type": "{{project_type}}"}},
+                {"name": "git_init", "type": "action", "action": "git.init", "params": {"repo_path": "{{project_name}}"}},
+                {"name": "create_repo", "type": "action", "action": "github.create_repo", "params": {"name": "{{project_name}}", "private": "{{private}}"}},
+                {"name": "add_remote", "type": "action", "action": "git.add_remote", "params": {"repo_path": "{{project_name}}", "remote_name": "origin", "url": "https://github.com/{{github_owner}}/{{project_name}}.git"}},
+                {"name": "add_files", "type": "action", "action": "git.add", "params": {"repo_path": "{{project_name}}", "files": ["."]}},
+                {"name": "commit", "type": "action", "action": "git.commit", "params": {"repo_path": "{{project_name}}", "message": "Initial commit by Jarvis"}},
+                {"name": "push_gate", "type": "approval", "approval_summary": "Approve push to GitHub"},
+                {"name": "push", "type": "action", "action": "git.push", "params": {"repo_path": "{{project_name}}", "remote": "origin", "branch": "main"}},
             ],
         })
 
@@ -196,3 +216,54 @@ class GitHubPlugin(AutomationPlugin):
         items = result.get("items", [])
         repos = [{"full_name": r.get("full_name"), "stars": r.get("stargazers_count"), "description": r.get("description", "")[:100]} for r in items]
         return {"status": "ok", "count": len(repos), "repos": repos}
+
+    def create_repo(self, params: dict, ctx: AutomationContext, rollback: RollbackManager) -> dict:
+        """Create a new GitHub repository."""
+        name = params.get("name", "")
+        if not name:
+            return {"status": "error", "error": "Repository name is required"}
+
+        data = {
+            "name": name,
+            "description": params.get("description", "Created by Jarvis Automation"),
+            "private": params.get("private", False),
+            "auto_init": params.get("auto_init", False),
+        }
+
+        org = params.get("org", "")
+        if org:
+            endpoint = f"/orgs/{org}/repos"
+        else:
+            endpoint = "/user/repos"
+
+        result = self._api_call("POST", endpoint, data)
+        if "error" in result:
+            return {"status": "error", "error": result["error"]}
+
+        repo_url = result.get("html_url", "")
+        clone_url = result.get("clone_url", "")
+        full_name = result.get("full_name", name)
+
+        rollback.register("github.create_repo", lambda: self._delete_repo_internal(full_name), f"Delete GitHub repo {full_name}")
+
+        return {
+            "status": "ok",
+            "name": name,
+            "full_name": full_name,
+            "url": repo_url,
+            "clone_url": clone_url,
+            "private": data["private"],
+        }
+
+    def delete_repo(self, params: dict, ctx: AutomationContext, rollback: RollbackManager) -> dict:
+        """Delete a GitHub repository."""
+        repo = params.get("repo", "")
+        if not repo:
+            return {"status": "error", "error": "Repository full name is required (owner/repo)"}
+        return self._delete_repo_internal(repo)
+
+    def _delete_repo_internal(self, full_name: str) -> dict:
+        result = self._api_call("DELETE", f"/repos/{full_name}")
+        if "error" in result:
+            return {"status": "error", "error": result["error"]}
+        return {"status": "ok", "deleted": full_name}

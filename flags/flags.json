@@ -10,5 +10,10 @@
   "recovery_engine": true,
   "performance_dashboard": true,
   "diagnostics_api": true,
-  "test_flag": true
+  "test_flag": true,
+  "repo_intelligence": true,
+  "knowledge_engine": true,
+  "ai_engineer": true,
+  "engineering_agents": true,
+  "dev_ecosystem": true
 }

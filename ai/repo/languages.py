@@ -81,7 +81,8 @@ class LanguageDetector:
             languages[lang_name].file_count += 1
 
             try:
-                line_count = sum(1 for _ in filepath.open(encoding="utf-8", errors="replace"))
+                with filepath.open(encoding="utf-8", errors="replace") as f:
+                    line_count = sum(1 for _ in f)
                 languages[lang_name].total_lines += line_count
             except Exception:
                 pass

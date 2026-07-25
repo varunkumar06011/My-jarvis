@@ -1,3 +1,4 @@
+import re
 import threading
 import time
 import uuid
@@ -43,7 +44,6 @@ class AutomationContext:
     def resolve(self, value: Any) -> Any:
         """Resolve template variables in a value (e.g. {{var_name}})."""
         if isinstance(value, str):
-            import re
             # If the entire string is a single template var, return the raw value
             full_match = re.fullmatch(r"\{\{(\w+)\}\}", value.strip())
             if full_match:

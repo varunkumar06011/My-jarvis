@@ -1,0 +1,20 @@
+[
+  {
+    "id": "e4a86bd9a9f8",
+    "name": "test_plugin",
+    "version": "1.0",
+    "category": "development",
+    "description": "Test plugin",
+    "author": "",
+    "homepage": "",
+    "dependencies": [],
+    "permissions": [],
+    "min_app_version": "1.0",
+    "signature": "sig",
+    "checksum": "",
+    "created_at": "2026-07-25T18:28:42.718739",
+    "downloads": 1,
+    "rating": 0.0,
+    "verified": true
+  }
+]

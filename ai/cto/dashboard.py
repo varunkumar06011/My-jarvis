@@ -1,5 +1,8 @@
+import ast
 import json
 import os
+import subprocess
+import sys
 import threading
 import time
 from collections import defaultdict
@@ -118,11 +121,23 @@ class ExecutiveDashboard:
                     "severity": "medium",
                 })
 
-        # Test coverage (placeholder — would integrate with pytest-cov)
-        health_data.test_coverage = {
-            "status": "not_configured",
-            "note": "Install pytest-cov and run tests for coverage data",
-        }
+        # Failed builds — check event store for failed automation tasks
+        events = event_store.search(event_type="TaskFailed", limit=20)
+        for evt in events:
+            health_data.failed_builds.append({
+                "task": evt.get("data", {}).get("name", "unknown"),
+                "error": evt.get("data", {}).get("error", ""),
+                "timestamp": evt.get("timestamp", ""),
+            })
+
+        # Technical debt — scan for TODO/FIXME in Python files
+        health_data.tech_debt = self._scan_tech_debt()
+
+        # Pending releases — check for git tags or release-related events
+        health_data.pending_releases = self._check_pending_releases()
+
+        # Test coverage — integrate with pytest-cov if available
+        health_data.test_coverage = self._collect_test_coverage()
 
         return health_data.to_dict()
 
@@ -167,6 +182,110 @@ class ExecutiveDashboard:
                 "running": lc.is_running(),
             }
         return {"state": "unknown"}
+
+    def _scan_tech_debt(self) -> list[dict]:
+        debt = []
+        root = Path(".")
+        exclude = {"venv", "__pycache__", ".git", "node_modules", "assets", "data"}
+        count = 0
+        for f in root.rglob("*.py"):
+            if any(part in exclude for part in f.parts):
+                continue
+            try:
+                lines = f.read_text(encoding="utf-8", errors="replace").splitlines()
+                for i, line in enumerate(lines, 1):
+                    stripped = line.strip()
+                    if "TODO" in stripped or "FIXME" in stripped or "HACK" in stripped:
+                        debt.append({
+                            "file": str(f.relative_to(root)).replace("\\", "/"),
+                            "line": i,
+                            "type": "TODO" if "TODO" in stripped else ("FIXME" if "FIXME" in stripped else "HACK"),
+                            "text": stripped[:100],
+                        })
+                        count += 1
+                        if count >= 50:
+                            return debt
+            except Exception:
+                continue
+        return debt
+
+    def _check_pending_releases(self) -> list[dict]:
+        releases = []
+        try:
+            result = subprocess.run(
+                ["git", "tag", "--sort=-creatordate"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                tags = result.stdout.strip().splitlines()[:5]
+                for tag in tags:
+                    releases.append({"tag": tag, "status": "released"})
+
+            result = subprocess.run(
+                ["git", "log", "--oneline", "-10"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                commits = result.stdout.strip().splitlines()
+                for commit in commits:
+                    if any(kw in commit.lower() for kw in ["release", "version", "v1."]):
+                        releases.append({"commit": commit[:80], "status": "pending"})
+        except Exception:
+            pass
+        return releases[:10]
+
+    def _collect_test_coverage(self) -> dict:
+        coverage_file = Path(".coverage")
+        if not coverage_file.exists():
+            return {
+                "status": "not_available",
+                "note": "Run 'python -m pytest --cov' to generate coverage data",
+            }
+
+        try:
+            import coverage
+            cov = coverage.Coverage()
+            cov.load()
+            analysis = cov.analysis2
+            total_lines = 0
+            covered_lines = 0
+            files = {}
+
+            for filename in cov.get_data().measured_files():
+                try:
+                    _, statements, missing, _ = cov.analysis(filename)
+                    total = len(statements)
+                    covered = total - len(missing)
+                    total_lines += total
+                    covered_lines += covered
+                    rel = str(Path(filename).relative_to(Path(".").resolve())).replace("\\", "/")
+                    files[rel] = {
+                        "total": total,
+                        "covered": covered,
+                        "missing": len(missing),
+                        "percent": round(covered / total * 100, 1) if total > 0 else 0,
+                    }
+                except Exception:
+                    continue
+
+            percent = round(covered_lines / total_lines * 100, 1) if total_lines > 0 else 0
+            return {
+                "status": "available",
+                "percent": percent,
+                "covered_lines": covered_lines,
+                "total_lines": total_lines,
+                "files": dict(list(files.items())[:20]),
+            }
+        except ImportError:
+            return {
+                "status": "not_configured",
+                "note": "Install pytest-cov: pip install pytest-cov",
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+            }
 
 
 executive_dashboard = ExecutiveDashboard()

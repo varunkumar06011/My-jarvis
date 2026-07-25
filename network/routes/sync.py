@@ -48,8 +48,13 @@ async def push_sync(device_id: str, req: SyncPush):
 
 
 @router.get("/devices/{device_id}/pull")
-async def pull_sync(device_id: str, since_version: int = Query(0)):
-    return {"updates": sync_manager.pull(device_id, since_version)}
+async def pull_sync(device_id: str, since_version: int = Query(0), data_type: str = Query("")):
+    return {"updates": sync_manager.pull(device_id, since_version, data_type)}
+
+
+@router.get("/data/{data_type}")
+async def get_sync_data(data_type: str, limit: int = Query(50)):
+    return {"data": sync_manager.get_data(data_type, limit)}
 
 
 @router.get("/log")
