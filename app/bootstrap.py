@@ -31,6 +31,7 @@ def bootstrap():
     registry.register("lifecycle", lifecycle)
     registry.register("event_bus", bus)
     registry.register("task_queue", task_queue)
+    registry.register("health", health)
 
     print("\nLoading LLM...")
     from brain.llm import LLM
@@ -81,10 +82,25 @@ def bootstrap():
     def on_exit():
         lifecycle.transition(State.SHUTDOWN)
         bus.publish("ApplicationStopped", None)
+        qt_app.quit()
 
     tray = TrayIcon(lifecycle, on_exit=on_exit)
     tray.start()
     registry.register("tray", tray)
+
+    print("\nLaunching GUI...")
+    from desktop.app import start_gui
+    qt_app, window = start_gui()
+    registry.register("gui_window", window)
+    print("✓ GUI launched")
+
+    print("\nStarting Secure API Server...")
+    from configs.config import API_HOST, API_PORT
+    from network.api.server import start_server_in_thread
+    api_thread = start_server_in_thread(host=API_HOST, port=API_PORT)
+    print(f"✓ API server running at http://{API_HOST}:{API_PORT}")
+    print(f"✓ WebSocket endpoint at ws://{API_HOST}:{API_PORT}/ws")
+    print(f"✓ API docs at http://{API_HOST}:{API_PORT}/docs")
 
     print("\n🤖 Jarvis is ready. Say \"Hey Jarvis\" to start.\n")
 
@@ -97,14 +113,11 @@ def bootstrap():
     assistant_thread.start()
 
     try:
-        while lifecycle.is_running():
-            assistant_thread.join(timeout=1)
-            if not assistant_thread.is_alive():
-                break
+        qt_app.exec()
     except KeyboardInterrupt:
         print("\nShutting down...")
-        lifecycle.transition(State.SHUTDOWN)
 
+    lifecycle.transition(State.SHUTDOWN)
     health.stop()
     task_queue.shutdown()
     tray.stop()

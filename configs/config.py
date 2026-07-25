@@ -27,3 +27,18 @@ WAKE_WORD = "hey_jarvis"
 WAKE_THRESHOLD = 0.3
 
 WAKE_TIMEOUT = 30
+
+# ── API Server ────────────────────────────────────────────────────────────
+
+API_HOST = "0.0.0.0"
+API_PORT = 8100
+
+API_DEFAULT_KEY = "jarvis-local-dev-key"
+
+API_RATE_LIMIT_PER_MINUTE = 30
+API_RATE_LIMIT_PER_HOUR = 100
+
+API_JWT_SECRET = "jarvis-jwt-secret-change-in-production"
+API_JWT_EXPIRE_SECONDS = 3600
+
+API_ENABLE_DOCS = True

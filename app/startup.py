@@ -62,6 +62,41 @@ def check_requirements():
     except ImportError:
         errors.append("psutil package not installed")
 
+    try:
+        import fastapi
+    except ImportError:
+        errors.append("fastapi package not installed")
+
+    try:
+        import uvicorn
+    except ImportError:
+        errors.append("uvicorn package not installed")
+
+    try:
+        import pydantic
+    except ImportError:
+        errors.append("pydantic package not installed")
+
+    try:
+        import websockets
+    except ImportError:
+        errors.append("websockets package not installed")
+
+    try:
+        import requests
+    except ImportError:
+        errors.append("requests package not installed")
+
+    try:
+        from cryptography.fernet import Fernet
+    except ImportError:
+        errors.append("cryptography package not installed")
+
+    try:
+        import websocket
+    except ImportError:
+        errors.append("websocket-client package not installed")
+
     return errors
 
 
