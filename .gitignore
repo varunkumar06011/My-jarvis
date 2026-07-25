@@ -1,0 +1,17 @@
+# Virtual Environment
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs (keep logger.py, ignore log files)
+logs/*.log
+
+# Memory sessions (keep folder structure, ignore session data)
+memory/sessions/*.json
+
+# OS
+Thumbs.db
+.DS_Store
