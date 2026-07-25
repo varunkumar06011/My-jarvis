@@ -2,7 +2,7 @@ import re
 
 import ollama
 
-from configs.config import MODEL_NAME
+from configs.config import MODEL_NAME, GPU_LAYERS
 from core.tool_registry import get_tool_descriptions
 from core.tool_executor import execute, extract_expression
 
@@ -25,20 +25,33 @@ User message: {message}
 
 Tool:"""
 
-    try:
-        response = ollama.chat(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        result = response["message"]["content"].strip().lower()
+    options = {}
+    if GPU_LAYERS is not None:
+        options["num_gpu"] = GPU_LAYERS
 
-        if result in ("none", "none.", "n/a", ""):
+    for attempt in range(3):
+        try:
+            response = ollama.chat(
+                model=MODEL_NAME,
+                messages=[{"role": "user", "content": prompt}],
+                options=options,
+            )
+            result = response["message"]["content"].strip().lower()
+
+            if result in ("none", "none.", "n/a", ""):
+                return None
+
+            first_word = result.split()[0]
+            return first_word
+        except Exception as e:
+            error_str = str(e).lower()
+            if "out-of-memory" in error_str or "failed to allocate" in error_str:
+                from brain.llm import _kill_stale_llama_servers
+                _kill_stale_llama_servers()
+            if attempt < 2:
+                import time
+                time.sleep(3)
             return None
-
-        first_word = result.split()[0]
-        return first_word
-    except Exception:
-        return None
 
 
 def route(message: str) -> str | None:
