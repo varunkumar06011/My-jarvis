@@ -55,6 +55,7 @@ from network.routes.cto import router as cto_router
 from network.routes.learning import router as learning_router
 from network.routes.sync import router as sync_router
 from network.routes.marketplace import router as marketplace_router
+from network.routes.release import router as release_router
 
 
 @asynccontextmanager
@@ -162,6 +163,8 @@ def create_app() -> FastAPI:
     app.include_router(cto_router)
     app.include_router(learning_router)
     app.include_router(sync_router)
+    app.include_router(marketplace_router)
+    app.include_router(release_router)
 
     # ── Backward-compat redirects (/api/* -> /api/v1/*) ──
     from fastapi.responses import RedirectResponse

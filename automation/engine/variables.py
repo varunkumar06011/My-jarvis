@@ -40,6 +40,13 @@ class VariableStore:
     def resolve(self, value: Any) -> Any:
         """Resolve {{var}} references in a value."""
         if isinstance(value, str):
+            import re
+            full_match = re.fullmatch(r"\{\{(\w+)\}\}", value.strip())
+            if full_match:
+                key = full_match.group(1)
+                with self._lock:
+                    if key in self._vars:
+                        return self._vars[key]
             result = value
             for k, v in self.all().items():
                 result = result.replace(f"{{{{{k}}}}}", str(v))
