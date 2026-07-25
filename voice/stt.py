@@ -1,27 +1,24 @@
-import tempfile
-
 import sounddevice as sd
 import whisper
 
+from configs.config import WHISPER_MODEL
+from voice.vad import VoiceActivityDetector
+
 
 class SpeechToText:
-    def __init__(self, model_name="base"):
-        print("Loading Whisper model...")
+    def __init__(self, model_name=None):
+        model_name = model_name or WHISPER_MODEL
+        print(f"Loading Whisper model ({model_name})...")
         self.model = whisper.load_model(model_name)
         print("Whisper ready.")
+        self.vad = VoiceActivityDetector()
 
     def listen(self, duration=5, sample_rate=16000):
-        print(f"\nSpeak now ({duration} seconds)...")
+        audio = self.vad.listen()
 
-        recording = sd.rec(
-            int(duration * sample_rate),
-            samplerate=sample_rate,
-            channels=1,
-            dtype="float32",
-        )
+        if audio is None:
+            return ""
 
-        sd.wait()
-
-        result = self.model.transcribe(recording.flatten())
+        result = self.model.transcribe(audio.flatten())
 
         return result["text"].strip()

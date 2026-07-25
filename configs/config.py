@@ -3,3 +3,17 @@ MODEL_NAME = "qwen2.5-coder:7b"
 APP_NAME = "Jarvis"
 
 VERSION = "2.0"
+
+WHISPER_MODEL = "small"
+
+SAMPLE_RATE = 16000
+
+SILENCE_TIMEOUT = 1.0
+
+MAX_RECORD_SECONDS = 20
+
+WAKE_WORD = "hey_jarvis"
+
+WAKE_THRESHOLD = 0.3
+
+WAKE_TIMEOUT = 30

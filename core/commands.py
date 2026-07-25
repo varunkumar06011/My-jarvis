@@ -12,7 +12,9 @@ def execute(command: str, jarvis) -> bool:
         print("/history  - Show conversation history")
         print("/model    - Show current model")
         print("/sessions - List saved sessions")
-        print("/exit     - Exit Jarvis")
+        print("/voice     - Start voice mode")
+        print("/assistant - Start wake word mode")
+        print("/exit      - Exit Jarvis")
         return True
 
     if command == "/model":
@@ -50,5 +52,11 @@ def execute(command: str, jarvis) -> bool:
                 print(f"- {session}")
 
         return True
+
+    if command == "/voice":
+        return "voice"
+
+    if command == "/assistant":
+        return "assistant"
 
     return False
