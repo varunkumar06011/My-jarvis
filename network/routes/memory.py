@@ -5,7 +5,7 @@ from memory.storage import load_history, list_sessions
 from network.api.authentication import require_perm
 from network.api.schemas import MemoryEntry, MemoryResponse
 
-router = APIRouter(prefix="/api", tags=["memory"])
+router = APIRouter(prefix="/api/v1", tags=["memory"])
 
 
 @router.get("/memory", response_model=MemoryResponse)

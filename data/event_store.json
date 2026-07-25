@@ -1,0 +1,33 @@
+[
+  {
+    "id": "b7e839a8cb12",
+    "timestamp": "2026-07-25 16:45:31.266",
+    "epoch": 1784978131.2667878,
+    "category": "startup",
+    "event": "ApplicationStarted",
+    "source": "",
+    "request_id": "",
+    "session_id": "",
+    "conversation_id": "",
+    "automation_id": "",
+    "duration_ms": 0,
+    "status": "success",
+    "metadata": {
+      "component": "api_server",
+      "services": [
+        "api_server",
+        "ws_manager",
+        "rate_limiter",
+        "api_key_manager",
+        "jwt_manager",
+        "audit_logger",
+        "event_store",
+        "metrics",
+        "telemetry",
+        "recovery_engine",
+        "structured_logger",
+        "flag_manager"
+      ]
+    }
+  }
+]

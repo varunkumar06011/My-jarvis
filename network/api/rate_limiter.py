@@ -95,7 +95,7 @@ class RateLimitMiddleware:
             await send(response)
             await send({
                 "type": "http.response.body",
-                "body": b'{"error":"Rate limit exceeded","detail":"Too many requests. Please slow down."}',
+                "body": b'{"error":"Rate limit exceeded","code":"RATE_LIMIT_EXCEEDED","detail":"Too many requests. Please slow down."}',
             })
             return
 

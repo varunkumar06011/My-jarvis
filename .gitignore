@@ -15,3 +15,12 @@ memory/sessions/*.json
 # OS
 Thumbs.db
 .DS_Store
+
+# Secrets
+.env
+
+# API keys (generated, sensitive)
+data/api_keys.json
+
+# Backups
+backups/

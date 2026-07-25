@@ -4,7 +4,7 @@ import configs.config as config
 from network.api.authentication import require_perm
 from network.api.schemas import SettingsResponse, SettingsUpdate, SettingsUpdateResponse
 
-router = APIRouter(prefix="/api", tags=["settings"])
+router = APIRouter(prefix="/api/v1", tags=["settings"])
 
 
 @router.get("/settings", response_model=SettingsResponse)

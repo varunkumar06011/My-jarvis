@@ -7,7 +7,7 @@ from network.api.authentication import require_perm
 from network.api.schemas import ToolRequest, ToolResponse
 from network.security.audit import audit_logger
 
-router = APIRouter(prefix="/api", tags=["tools"])
+router = APIRouter(prefix="/api/v1", tags=["tools"])
 
 
 @router.post("/tool", response_model=ToolResponse)

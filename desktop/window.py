@@ -14,6 +14,10 @@ from desktop.pages.diagnostics import DiagnosticsPage
 from desktop.pages.logs import LogsPage
 from desktop.pages.models import ModelsPage
 from desktop.pages.about import AboutPage
+from desktop.pages.performance import PerformancePage
+from desktop.pages.automation import AutomationPage
+from desktop.pages.cto import CTOPage
+from desktop.pages.learning import LearningPage
 
 from core.event_bus import bus
 from core.service_registry import registry
@@ -39,6 +43,10 @@ class MainWindow(QMainWindow):
         pages = [
             ("🏠  Home", HomePage()),
             ("💬  Chat", ChatPage()),
+            ("🤖  Automation", AutomationPage()),
+            ("📊  Performance", PerformancePage()),
+            ("👔  AI CTO", CTOPage()),
+            ("🧠  Learning", LearningPage()),
             ("⚙  Settings", SettingsPage()),
             ("🧩  Plugins", PluginsPage()),
             ("📊  Diagnostics", DiagnosticsPage()),

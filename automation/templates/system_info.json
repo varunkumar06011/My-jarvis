@@ -1,0 +1,18 @@
+{
+  "id": "system_info",
+  "name": "System Information",
+  "description": "Gather system information via terminal commands",
+  "version": "1.0",
+  "variables": {},
+  "steps": [
+    {
+      "name": "systeminfo",
+      "type": "action",
+      "action": "terminal.safe_execute",
+      "params": {
+        "command": "systeminfo",
+        "shell": "powershell"
+      }
+    }
+  ]
+}

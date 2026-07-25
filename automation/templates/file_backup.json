@@ -1,0 +1,21 @@
+{
+  "id": "file_backup",
+  "name": "File Backup",
+  "description": "Copy files from source to backup directory",
+  "version": "1.0",
+  "variables": {
+    "src": "",
+    "dst": ""
+  },
+  "steps": [
+    {
+      "name": "copy_file",
+      "type": "action",
+      "action": "fs.copy",
+      "params": {
+        "src": "{{src}}",
+        "dst": "{{dst}}"
+      }
+    }
+  ]
+}

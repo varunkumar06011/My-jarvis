@@ -11,7 +11,7 @@ from core.task_queue import task_queue
 from network.api.authentication import authenticate, require_perm
 from network.api.schemas import ChatRequest, ChatResponse, ChatStreamChunk
 
-router = APIRouter(prefix="/api", tags=["chat"])
+router = APIRouter(prefix="/api/v1", tags=["chat"])
 
 
 @router.post("/chat", response_model=ChatResponse)

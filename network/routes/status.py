@@ -8,7 +8,7 @@ from core.task_queue import task_queue
 from network.api.authentication import authenticate
 from network.api.schemas import StatusResponse
 
-router = APIRouter(prefix="/api", tags=["status"])
+router = APIRouter(prefix="/api/v1", tags=["status"])
 
 
 @router.get("/status", response_model=StatusResponse)
@@ -27,7 +27,7 @@ async def status(auth: dict = Depends(authenticate)):
     if registry.has("tools"):
         plugin_count = len(registry.get("tools"))
 
-    queue_size = len(task_queue._tasks.queue) if hasattr(task_queue, "_tasks") else 0
+    queue_size = task_queue.pending_count()
 
     cpu_percent = psutil.cpu_percent(interval=0.5)
     ram_percent = psutil.virtual_memory().percent

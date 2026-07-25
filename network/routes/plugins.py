@@ -8,7 +8,7 @@ from core.tool_registry import TOOLS, _discover_tools
 from network.api.authentication import require_perm
 from network.api.schemas import PluginInfo, PluginsResponse, PluginReloadResponse
 
-router = APIRouter(prefix="/api", tags=["plugins"])
+router = APIRouter(prefix="/api/v1", tags=["plugins"])
 
 
 @router.get("/plugins", response_model=PluginsResponse)

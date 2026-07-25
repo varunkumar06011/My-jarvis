@@ -1,0 +1,27 @@
+{
+  "id": "docker_status",
+  "name": "Docker Status Check",
+  "description": "Check Docker container and image status",
+  "version": "1.0",
+  "variables": {},
+  "steps": [
+    {
+      "name": "containers",
+      "type": "action",
+      "action": "docker.ps",
+      "params": {}
+    },
+    {
+      "name": "images",
+      "type": "action",
+      "action": "docker.images",
+      "params": {}
+    },
+    {
+      "name": "stats",
+      "type": "action",
+      "action": "docker.stats",
+      "params": {}
+    }
+  ]
+}

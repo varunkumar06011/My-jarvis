@@ -1,0 +1,14 @@
+{
+  "browser_v1": false,
+  "github_v1": false,
+  "automation_v1": false,
+  "agents_v1": false,
+  "vision_beta": false,
+  "event_store": true,
+  "metrics": true,
+  "telemetry": true,
+  "recovery_engine": true,
+  "performance_dashboard": true,
+  "diagnostics_api": true,
+  "test_flag": true
+}

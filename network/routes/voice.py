@@ -5,7 +5,7 @@ from core.service_registry import registry
 from network.api.authentication import require_perm
 from network.api.schemas import VoiceRequest, VoiceResponse
 
-router = APIRouter(prefix="/api", tags=["voice"])
+router = APIRouter(prefix="/api/v1", tags=["voice"])
 
 
 @router.post("/voice", response_model=VoiceResponse)

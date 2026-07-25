@@ -1,0 +1,40 @@
+{
+  "id": "open_browser_and_screenshot",
+  "name": "Open Browser and Screenshot",
+  "description": "Open a browser, navigate to a URL, and take a screenshot",
+  "version": "1.0",
+  "variables": {
+    "url": "https://example.com"
+  },
+  "steps": [
+    {
+      "name": "open_browser",
+      "type": "action",
+      "action": "browser.open",
+      "params": {
+        "browser": "chromium"
+      }
+    },
+    {
+      "name": "navigate",
+      "type": "action",
+      "action": "browser.navigate",
+      "params": {
+        "url": "{{url}}"
+      }
+    },
+    {
+      "name": "screenshot",
+      "type": "action",
+      "action": "browser.screenshot",
+      "params": {
+        "name": "page_screenshot"
+      }
+    },
+    {
+      "name": "close",
+      "type": "action",
+      "action": "browser.close"
+    }
+  ]
+}

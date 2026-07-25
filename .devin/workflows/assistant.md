@@ -1,188 +1,196 @@
-# Step 27 — Secure Communication Platform (API + WebSocket)
+# Step 28 — Enterprise Automation Platform
 
 ## Goal
 
-Turn Jarvis into a **local AI server** that other applications (desktop, Android, web) can securely communicate with.
+Jarvis becomes capable of safely operating the computer like a skilled human operator. This is the reusable execution platform — concrete automation plugins come in Step 29+.
 
-## Directory Structure
+## Architecture
 
-```text
-network/
-├── api/
-│   ├── server.py          # FastAPI app, lifespan, WebSocket endpoint
-│   ├── middleware.py       # Audit + request size limit middleware
-│   ├── authentication.py   # Bearer auth (API key + JWT)
-│   ├── rate_limiter.py     # Per-client rate limiting (30/min, 100/hour)
-│   ├── encryption.py       # Fernet encryption manager
-│   └── schemas.py          # Pydantic models for all requests/responses
-├── routes/
-│   ├── chat.py             # POST /api/chat, POST /api/chat/stream
-│   ├── voice.py            # POST /api/voice
-│   ├── tools.py            # POST /api/tool
-│   ├── status.py           # GET /api/status
-│   ├── health.py           # GET /api/health
-│   ├── plugins.py          # GET /api/plugins, POST /api/plugins/reload
-│   ├── memory.py           # GET /api/memory, GET /api/memory/sessions
-│   └── settings.py         # GET /api/settings, POST /api/settings
-├── websocket/
-│   ├── manager.py          # WebSocket connection manager + EventBus bridge
-│   ├── events.py           # WSEventType enum (all event names)
-│   └── streaming.py        # Token-by-token streaming helpers
-├── security/
-│   ├── jwt.py              # HS256 JWT create/verify/refresh
-│   ├── api_keys.py         # API key generation, validation, revocation
-│   ├── permissions.py      # Permission enum + checker
-│   └── audit.py            # Audit logger (connect, disconnect, tool, auth)
-└── clients/
-    └── sdk.py              # Python SDK client (REST + WebSocket)
+```
+automation/
+├── engine/
+│   ├── automation_engine.py      # Main entry point
+│   ├── execution_manager.py       # Orchestrates run/pause/resume/cancel
+│   ├── workflow_engine.py         # JSON/YAML/Python workflow parsing
+│   ├── state_machine.py           # 10-state lifecycle (nothing bypasses)
+│   ├── scheduler.py               # One-time, recurring, delayed jobs
+│   ├── queue_manager.py           # Priority queue with workers
+│   ├── context.py                 # Correlation IDs + variables
+│   ├── confirmations.py           # Approval engine (HIGH/CRITICAL)
+│   ├── rollback.py                # Undo tracking for reversible actions
+│   ├── artifacts.py               # Output storage (screenshots, PDFs, etc.)
+│   ├── history.py                 # Execution records
+│   └── variables.py               # Thread-safe variable store
+├── browser/controller.py          # Playwright integration
+├── windows/controller.py          # Windows OS automation
+├── filesystem/controller.py       # File operations with rollback
+├── terminal/controller.py         # PowerShell/CMD/WSL/Bash
+├── docker/controller.py           # Container/image/compose management
+├── database/controller.py         # SQLite/MySQL/PostgreSQL (read-only)
+├── printer/controller.py          # Printer queue/job management
+├── office/controller.py           # Word/Excel/PPT/PDF
+├── recorder/controller.py         # Macro record/replay
+├── policies/engine.py             # Risk levels + approval rules
+├── validators/workflow_validator.py
+├── templates/manager.py           # Reusable workflow templates
+├── permissions/__init__.py
+└── register_actions.py            # Maps all actions to handlers
 ```
 
-## Framework
+## State Machine
 
-- **FastAPI** — async REST API
-- **Uvicorn** — ASGI server
-- **Pydantic** — request/response validation
-- **WebSockets** — real-time event streaming
+```
+Created → Queued → Running → Completed
+                    ↓         ↗
+                Paused → Running
+                    ↓
+                Cancelled
 
-## REST Endpoints
+Running → WaitingApproval → Running (approved)
+                          → Failed (rejected)
 
-| Method | Path | Description | Permission |
-|--------|------|-------------|------------|
-| POST | `/api/chat` | Send message to Jarvis | `chat` |
-| POST | `/api/chat/stream` | Stream chat response (NDJSON) | `chat` |
-| POST | `/api/voice` | Speak text via TTS | `voice` |
-| POST | `/api/tool` | Execute a Jarvis tool | `execute_tools` |
-| GET | `/api/status` | Get Jarvis status (lifecycle, CPU, RAM, etc.) | `read` |
-| GET | `/api/health` | Get health status (Healthy/Degraded/Unavailable) | `read` |
-| GET | `/api/plugins` | List all loaded plugins | `plugins` |
-| POST | `/api/plugins/reload` | Reload all plugins | `plugins` |
-| GET | `/api/memory` | Get conversation history | `read` |
-| GET | `/api/memory/sessions` | List saved sessions | `read` |
-| GET | `/api/settings` | Get current configuration | `read` |
-| POST | `/api/settings` | Update configuration at runtime | `settings` |
-| POST | `/api/auth/login` | Exchange API key for JWT token | — |
-| POST | `/api/auth/refresh` | Refresh JWT token | — |
+Running → Retrying → Running
+         ↓
+         Failed
 
-## WebSocket
-
-Connect to `ws://host:port/ws?api_key=YOUR_KEY`
-
-Optional: `&subscriptions=WakeWordDetected,LLMResponse` to filter events.
-
-### Events
-
-- `WakeWordDetected`
-- `SpeechStarted`
-- `SpeechFinished`
-- `LifecycleChanged`
-- `TaskStarted`
-- `TaskCompleted`
-- `TaskFailed`
-- `HealthChanged`
-- `NotificationCreated`
-- `PluginLoaded`
-- `LLMResponse`
-- `ToolExecuted`
-
-## Security
-
-### Authentication
-
-All endpoints require `Authorization: Bearer API_KEY` header.
-
-Supports:
-1. **API Keys** — generated, hashed, stored in `data/api_keys.json`
-2. **JWT** — login via `/api/auth/login` to get a token
-3. **Dev key** — `jarvis-local-dev-key` (for local development only)
-
-### Permissions
-
-`read`, `chat`, `voice`, `execute_tools`, `settings`, `plugins`, `admin`
-
-### Audit Logging
-
-All security-relevant actions are logged to `logs/audit.log`:
-- Client connected/disconnected
-- Tool executed
-- Authentication failed
-- Permission denied
-- WebSocket connected/disconnected
-
-## Rate Limiting
-
-- 30 requests/minute per client
-- 100 requests/hour per client
-- Returns HTTP 429 when exceeded
-
-## Service Registry Integration
-
-Registered during API server lifespan:
-- `api_server` — FastAPI app instance
-- `ws_manager` — WebSocket manager
-- `rate_limiter` — Rate limiter instance
-- `api_key_manager` — API key manager
-- `jwt_manager` — JWT manager
-- `audit_logger` — Audit logger
-
-## Event Bus Integration
-
-The EventBus → WebSocket bridge (`subscribe_to_event_bus()`) subscribes to all `WSEventType` events and broadcasts them to connected WebSocket clients.
-
-Flow: `POST /chat → TaskQueue → LLM → LLMResponse event → WebSocket → Desktop/Android/Web`
-
-## Configuration
-
-In `configs/config.py`:
-
-```python
-API_HOST = "0.0.0.0"
-API_PORT = 8100
-API_DEFAULT_KEY = "jarvis-local-dev-key"
-API_RATE_LIMIT_PER_MINUTE = 30
-API_RATE_LIMIT_PER_HOUR = 100
-API_JWT_SECRET = "jarvis-jwt-secret-change-in-production"
-API_JWT_EXPIRE_SECONDS = 3600
-API_ENABLE_DOCS = True
+Failed → RolledBack
+Completed → RolledBack
 ```
 
-## SDK Usage
+## Workflow Engine
 
-```python
-from network.clients.sdk import JarvisSDK
+Supports JSON, YAML, and Python plugin workflows.
 
-client = JarvisSDK(base_url="http://localhost:8100", api_key="jarvis-local-dev-key")
+Step types: `action`, `condition`, `loop`, `parallel`, `delay`, `approval`, `sub_workflow`, `try_catch`
 
-# Chat
-response = client.chat("Hello Jarvis")
+Features: sequential, parallel, branching, loops, conditions, variables (`{{var}}`), retries, delays, approval gates, sub-workflows, try/catch.
 
-# Stream chat
-for chunk in client.chat_stream("Tell me a story"):
-    print(chunk["token"], end="", flush=True)
+## Policy Engine
 
-# Status
-status = client.status()
+38 default policies across 4 risk levels:
+- **SAFE**: browser.open, fs.read, docker.ps, etc.
+- **MEDIUM**: fs.write, browser.download, printer.print
+- **HIGH**: fs.delete, terminal.execute, docker.stop
+- **CRITICAL**: windows.power, docker.rm, db.write
 
-# WebSocket events
-def on_event(data):
-    print(f"Event: {data['event']} | Data: {data['data']}")
+HIGH and CRITICAL require approval. MEDIUM+ require rollback metadata.
 
-client.connect_ws(on_event=on_event)
+## Integration Modules
+
+| Module | Actions | Key Features |
+|--------|---------|-------------|
+| Browser | 11 | Navigate, click, type, screenshot, PDF, download, wait |
+| Windows | 10 | Launch/close apps, clipboard, screenshot, volume, explorer |
+| Filesystem | 12 | Read, write, copy, move, rename, delete, search, hash, compress |
+| Terminal | 3 | Execute, safe_execute (whitelist), stream |
+| Docker | 11 | ps, images, logs, restart, stop, start, compose, stats, exec, cleanup |
+| Database | 4 | Query (read-only), schema, explain, export CSV |
+| Printer | 9 | List, default, jobs, cancel, pause, resume, print, test page |
+| Office | 2 | Create (Word/Excel/PPT/PDF), read |
+| Macro | 1 | Replay with speed control |
+
+## API Endpoints (27 routes)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/automation/start` | Start workflow (sync or async) |
+| POST | `/api/v1/automation/{id}/pause` | Pause execution |
+| POST | `/api/v1/automation/{id}/resume` | Resume execution |
+| POST | `/api/v1/automation/{id}/cancel` | Cancel execution |
+| POST | `/api/v1/automation/{id}/rollback` | Rollback execution |
+| GET | `/api/v1/automation/{id}/status` | Get execution status |
+| GET | `/api/v1/automation/history` | List execution history |
+| GET | `/api/v1/automation/history/summary` | History summary |
+| GET | `/api/v1/automation/workflows` | List registered workflows |
+| POST | `/api/v1/automation/workflows` | Register new workflow |
+| GET | `/api/v1/automation/templates` | List templates |
+| GET | `/api/v1/automation/templates/{id}` | Get template detail |
+| POST | `/api/v1/automation/templates/{id}/start` | Start from template |
+| POST | `/api/v1/automation/validate` | Validate workflow |
+| GET | `/api/v1/automation/queue` | Queue status |
+| GET | `/api/v1/automation/active` | Active automations |
+| GET | `/api/v1/automation/approvals` | Pending approvals |
+| POST | `/api/v1/automation/approvals/{id}/approve` | Approve request |
+| POST | `/api/v1/automation/approvals/{id}/reject` | Reject request |
+| GET | `/api/v1/automation/policies` | List policies |
+| GET | `/api/v1/automation/artifacts` | List artifacts |
+| POST | `/api/v1/automation/schedule` | Create schedule |
+| GET | `/api/v1/automation/schedules` | List schedules |
+| DELETE | `/api/v1/automation/schedules/{id}` | Cancel schedule |
+| GET | `/api/v1/automation/macros` | List macros |
+| POST | `/api/v1/automation/macros/{id}/replay` | Replay macro |
+| DELETE | `/api/v1/automation/macros/{id}` | Delete macro |
+
+## Event Bus Events
+
+`AutomationCreated`, `AutomationQueued`, `AutomationStarted`, `AutomationPaused`, `AutomationResumed`, `AutomationApprovalRequested`, `AutomationApproved`, `AutomationRejected`, `AutomationStepStarted`, `AutomationStepCompleted`, `AutomationRetry`, `AutomationRollback`, `AutomationCompleted`, `AutomationFailed`, `AutomationCancelled`, `AutomationScheduled`
+
+## Templates
+
+4 built-in templates: `open_browser_and_screenshot`, `file_backup`, `system_info`, `docker_status`
+
+## New Files (28)
+
+```
+automation/
+├── __init__.py
+├── register_actions.py
+├── engine/ (14 files)
+├── browser/controller.py
+├── windows/controller.py
+├── filesystem/controller.py
+├── terminal/controller.py
+├── docker/controller.py
+├── database/controller.py
+├── printer/controller.py
+├── office/controller.py
+├── recorder/controller.py
+├── policies/engine.py
+├── validators/workflow_validator.py
+├── templates/manager.py + 4 JSON templates
+└── permissions/__init__.py
+
+network/routes/automation.py
+desktop/pages/automation.py
 ```
 
-## Install Dependencies
+## Modified Files
+
+```
+network/api/server.py       # Automation router + engine start/stop
+network/websocket/events.py # 16 automation events added
+core/event_store.py         # Automation events in CATEGORY_MAP
+desktop/window.py           # Automation page in sidebar
+app/startup.py              # data/macros + data/artifacts dirs
+```
+
+## Verified
+
+- 102 routes total (up from 75)
+- All 27 automation endpoints return 200
+- Workflow validation works (valid + invalid detection)
+- Workflow creation and registration works
+- Sync execution works (Test Workflow → completed in 8.76ms)
+- History records execution with steps, duration, status
+- Scheduling works (recurring job created)
+- 38 policies loaded with risk levels
+- 4 templates available
+- Queue manager running with 2 workers
+- Scheduler running
+- All action handlers registered (browser, windows, fs, terminal, docker, db, printer, office, macro)
+- Automation events published to EventBus
+- Printer module gracefully handles missing pywin32
+
+## Install Dependencies (optional, per module)
 
 ```bash
-pip install fastapi uvicorn pydantic websockets requests cryptography websocket-client
+pip install playwright && playwright install    # Browser
+pip install pywin32                               # Windows/Printer
+pip install Pillow                                # Screenshots
+pip install pycaw                                 # Audio
+pip install python-docx openpyxl python-pptx fpdf2  # Office
+pip install PyMuPDF                               # PDF reading
+pip install pyautogui                             # Macro recorder
+pip install send2trash                            # Recycle bin
+pip install pymysql psycopg2-binary               # MySQL/PostgreSQL
 ```
-
-## Success Criteria
-
-- [x] FastAPI server runs alongside Jarvis
-- [x] REST endpoints are functional
-- [x] WebSocket streams live events
-- [x] API key authentication works
-- [x] Rate limiting is enforced
-- [x] Event Bus is integrated
-- [x] Services are registered in the Service Registry
-- [x] Audit logs are generated
-- [x] API documentation (`/docs`) is available

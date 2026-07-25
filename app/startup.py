@@ -97,6 +97,11 @@ def check_requirements():
     except ImportError:
         errors.append("websocket-client package not installed")
 
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        errors.append("python-dotenv package not installed")
+
     return errors
 
 
@@ -107,7 +112,13 @@ def ensure_directories():
         "logs",
         "memory/sessions",
         "data",
+        "data/telemetry",
+        "data/macros",
+        "data/artifacts",
+        "data/reminders",
         "models",
+        "backups",
+        "flags",
     ]
 
     for d in dirs:
