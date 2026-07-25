@@ -1,6 +1,7 @@
 from brain.llm import LLM
 from configs.config import APP_NAME, VERSION
 from core.commands import execute
+from voice.tts import TextToSpeech
 
 
 def main():
@@ -10,6 +11,7 @@ def main():
     print("=" * 50)
 
     jarvis = LLM()
+    speaker = TextToSpeech()
 
     while True:
         user = input("\nYou: ")
@@ -24,6 +26,8 @@ def main():
         reply = jarvis.chat(user)
 
         print(f"\nJarvis: {reply}")
+
+        speaker.speak(reply)
 
 
 if __name__ == "__main__":
